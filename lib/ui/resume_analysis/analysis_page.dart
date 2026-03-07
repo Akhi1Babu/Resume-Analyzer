@@ -477,65 +477,107 @@ class AnalysisPage extends StatelessWidget {
     AnalysisModel analysis,
   ) async {
     final PdfDocument document = PdfDocument();
+
+    // Set page margins for a more professional LaTeX look
+    document.pageSettings.margins.all = 40;
+
     final PdfPage page = document.pages.add();
-    final PdfFont font = PdfStandardFont(PdfFontFamily.helvetica, 11);
-    final PdfFont boldFont = PdfStandardFont(
+
+    // LaTeX-style fonts
+    final PdfFont nameFont = PdfStandardFont(
+      PdfFontFamily.timesRoman,
+      24,
+      style: PdfFontStyle.bold,
+    );
+    final PdfFont contactFont = PdfStandardFont(PdfFontFamily.timesRoman, 10);
+    final PdfFont sectionHeaderFont = PdfStandardFont(
       PdfFontFamily.helvetica,
       12,
       style: PdfFontStyle.bold,
     );
-    final PdfFont headerFont = PdfStandardFont(
+    final PdfFont jobTitleFont = PdfStandardFont(
       PdfFontFamily.helvetica,
-      14,
+      11,
       style: PdfFontStyle.bold,
     );
+    final PdfFont bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 10);
 
-    // If we have a fully rewritten text, print it semantically
+    // If we have a fully rewritten text, print it semantically imitating LaTeX ATS layouts
     if (analysis.rewrittenResumeText != null &&
         analysis.rewrittenResumeText!.isNotEmpty) {
-      double yPos = 20;
+      double yPos = 0;
       PdfPage currentPage = page;
+      bool inHeaderPhase = true;
 
       final lines = analysis.rewrittenResumeText!.split('\n');
-      for (var line in lines) {
-        if (line.trim().isEmpty) {
-          yPos += 8; // Small gap for empty lines
+      for (var rawLine in lines) {
+        String line = rawLine.trim();
+        if (line.isEmpty) {
+          yPos += 4;
           continue;
         }
 
-        PdfFont currentFont = font;
+        PdfFont currentFont = bodyFont;
         double xOffset = 0;
+        PdfTextAlignment alignment = PdfTextAlignment.left;
 
-        // Semantic Rules
-        bool isHeader =
+        // Semantic Detection
+        bool isSectionHeader =
             line == line.toUpperCase() &&
-            line.length < 60 &&
+            line.length < 50 &&
             !line.startsWith('-') &&
-            !line.startsWith('•');
+            !line.startsWith('•') &&
+            !line.contains('@');
 
-        if (isHeader) {
-          currentFont = headerFont;
-          yPos += 12; // Extra top padding for headers
-        } else if (line.trim().startsWith('-') ||
-            line.trim().startsWith('•') ||
-            line.trim().startsWith('*')) {
-          xOffset = 15; // Indent bullet points
-        } else if (line.split(' ').length < 8 &&
-            !line.contains(RegExp(r'[a-z]'))) {
-          // Secondary fallback for titles without lowercase
-          currentFont = boldFont;
+        if (isSectionHeader) {
+          inHeaderPhase = false; // We have left the name/contact block
+          currentFont = sectionHeaderFont;
+          yPos += 16; // Top padding for sections
+        } else if (inHeaderPhase) {
+          // Centered Header Phase (Name & Contact)
+          alignment = PdfTextAlignment.center;
+          if (!line.contains('@') &&
+              !line.contains('1') &&
+              !line.contains('link') &&
+              line.length < 35 &&
+              yPos == 0) {
+            currentFont = nameFont; // First short string is likely the name
+            yPos += 8;
+          } else {
+            currentFont = contactFont;
+          }
+        } else if (line.startsWith('-') ||
+            line.startsWith('•') ||
+            line.startsWith('*')) {
+          // Bullet point formatting
+          xOffset = 18; // Indent bullet points precisely
+          currentFont = bodyFont;
+          line = line.replaceFirst(RegExp(r'^[-•*]\s*'), '•  ');
+        } else {
+          // Job Titles or Degrees (typically short bold lines before bullets)
+          if (line.split(' ').length <= 15 &&
+              !line.contains(RegExp(r'[.]{2,}'))) {
+            currentFont = jobTitleFont;
+            yPos += 8; // Spacing before a new job block
+          } else {
+            currentFont = bodyFont;
+          }
         }
 
         final element = PdfTextElement(
           text: line,
           font: currentFont,
-          format: PdfStringFormat(lineSpacing: 3),
+          format: PdfStringFormat(
+            lineSpacing: 1.5,
+            alignment: alignment,
+            wordWrap: PdfWordWrapType.word,
+          ),
         );
 
-        // Calculate available height, force new page if at extreme bottom
-        if (yPos > currentPage.getClientSize().height - 30) {
+        // Page break calculation
+        if (yPos > currentPage.getClientSize().height - 40) {
           currentPage = document.pages.add();
-          yPos = 20;
+          yPos = 0;
         }
 
         final PdfLayoutResult? result = element.draw(
@@ -549,12 +591,28 @@ class AnalysisPage extends StatelessWidget {
         );
 
         if (result != null) {
-          yPos = result.bounds.bottom + 4;
-          currentPage = result.page;
+          yPos = result.bounds.bottom + 2;
+
+          // Draw standard LaTeX horizontal rule under section headers
+          if (isSectionHeader) {
+            yPos += 4;
+            currentPage.graphics.drawLine(
+              PdfPen(PdfColor(0, 0, 0), width: 1.2),
+              Offset(0, yPos),
+              Offset(currentPage.getClientSize().width, yPos),
+            );
+            yPos += 6;
+          }
         }
       }
     } else {
       // Fallback for older resumes without rewrite metadata
+      final PdfFont boldFont = PdfStandardFont(
+        PdfFontFamily.helvetica,
+        14,
+        style: PdfFontStyle.bold,
+      );
+      final PdfFont font = PdfStandardFont(PdfFontFamily.helvetica, 12);
       double currentY = 40;
 
       if (analysis.rewrittenBullets.isNotEmpty) {
