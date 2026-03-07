@@ -552,7 +552,10 @@ class AnalysisPage extends StatelessWidget {
           // Bullet point formatting
           xOffset = 18; // Indent bullet points precisely
           currentFont = bodyFont;
-          line = line.replaceFirst(RegExp(r'^[-•*]\s*'), '•  ');
+          line = line.replaceFirst(
+            RegExp(r'^[-•*]\s*'),
+            '${String.fromCharCode(149)}  ',
+          );
         } else {
           // Job Titles or Degrees (typically short bold lines before bullets)
           if (line.split(' ').length <= 15 &&
@@ -596,10 +599,11 @@ class AnalysisPage extends StatelessWidget {
           // Draw standard LaTeX horizontal rule under section headers
           if (isSectionHeader) {
             yPos += 4;
+            double textWidth = currentFont.measureString(line).width;
             currentPage.graphics.drawLine(
               PdfPen(PdfColor(0, 0, 0), width: 1.2),
               Offset(0, yPos),
-              Offset(currentPage.getClientSize().width, yPos),
+              Offset(textWidth, yPos),
             );
             yPos += 6;
           }
