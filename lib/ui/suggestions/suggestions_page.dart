@@ -72,13 +72,11 @@ class SuggestionsPage extends StatelessWidget {
               }).toList();
               sortedAnalyses.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-              // Aggregate all suggestions
-              final allSuggestions = sortedAnalyses
-                  .expand((a) => a.suggestions)
-                  .toSet()
-                  .toList(); // Deduplicate to keep it clean
+              final validAnalyses = sortedAnalyses
+                  .where((a) => a.suggestions.isNotEmpty)
+                  .toList();
 
-              if (allSuggestions.isEmpty) {
+              if (validAnalyses.isEmpty) {
                 return const Center(
                   child: Text(
                     'No suggestions provided yet.',
@@ -88,36 +86,121 @@ class SuggestionsPage extends StatelessWidget {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                itemCount: allSuggestions.length,
+                padding: const EdgeInsets.fromLTRB(24, 100, 24, 24),
+                itemCount: validAnalyses.length,
                 itemBuilder: (context, index) {
+                  final analysis = validAnalyses[index];
+                  final dateStr = analysis.timestamp.toDate().toString().split(
+                    ' ',
+                  )[0];
+
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
+                    margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E3F).withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: const Color(0xFFFFB800).withOpacity(0.3),
+                        color: Colors.white.withOpacity(0.1),
+                        width: 1.5,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFFB800).withOpacity(0.05),
+                          blurRadius: 40,
+                          spreadRadius: 5,
+                        ),
+                      ],
                     ),
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.lightbulb_outline,
-                          color: Color(0xFFFFB800),
-                          size: 28,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            allSuggestions[index],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              height: 1.5,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFB800).withOpacity(0.1),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(24),
                             ),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Colors.white.withOpacity(0.05),
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.picture_as_pdf,
+                                color: Color(0xFFFFB800),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Resume - $dateStr',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFFFFB800,
+                                  ).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Score: ${analysis.score}',
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFB800),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: analysis.suggestions.map((suggestion) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 2),
+                                      child: const Icon(
+                                        Icons.lightbulb_outline,
+                                        color: Color(0xFFFFB800),
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        suggestion,
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 15,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
                       ],

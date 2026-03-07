@@ -11,7 +11,9 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
-    final userName = authService.currentUser?.name ?? 'Engineer';
+    final userName = authService.isLoading
+        ? 'Loading...'
+        : (authService.currentUser?.name ?? 'Engineer');
 
     return Scaffold(
       extendBodyBehindAppBar: true,
