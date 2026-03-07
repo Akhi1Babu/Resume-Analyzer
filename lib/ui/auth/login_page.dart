@@ -125,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
                                 color: Colors.black,
                               )
                             : const Text(
-                                'Initialize',
+                                'Login',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
