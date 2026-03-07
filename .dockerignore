@@ -1,0 +1,8 @@
+.git
+.dart_tool/
+build/
+linux/
+macos/
+windows/
+test/
+integration_test/
