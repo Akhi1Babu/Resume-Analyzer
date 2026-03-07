@@ -16,11 +16,12 @@ RUN flutter channel stable
 RUN flutter upgrade
 RUN flutter config --enable-web
 
-# Build the app
+# Build the app with secure API key injection
 WORKDIR /app
 COPY . .
 RUN flutter pub get
-RUN flutter build web --release
+ARG GEMINI_API_KEY
+RUN flutter build web --release --dart-define=GEMINI_API_KEY=${GEMINI_API_KEY}
 
 # Stage 2: Serve the app using Nginx
 FROM nginx:alpine

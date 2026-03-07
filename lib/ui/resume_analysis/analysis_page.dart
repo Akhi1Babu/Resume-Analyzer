@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -77,6 +76,13 @@ class AnalysisPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildRewrittenBullets(analysis!.rewrittenBullets),
                 ],
+                if (analysis!.rewrittenResumeText != null &&
+                    analysis!.rewrittenResumeText!.isNotEmpty) ...[
+                  const SizedBox(height: 48),
+                  _buildSectionTitle('Fully Rewritten Resume'),
+                  const SizedBox(height: 16),
+                  _buildRewrittenResumeText(analysis!.rewrittenResumeText!),
+                ],
                 const SizedBox(height: 64),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -112,7 +118,7 @@ class AnalysisPage extends StatelessWidget {
                       onPressed: () => _exportToPdf(context, analysis!),
                       icon: const Icon(Icons.picture_as_pdf),
                       label: const Text(
-                        'Download Suggestions as pdf',
+                        'Download ATS Optimized PDF',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -457,60 +463,132 @@ class AnalysisPage extends StatelessWidget {
     );
   }
 
+  Widget _buildRewrittenResumeText(String text) {
+    return _buildGlassCard(
+      child: SelectableText(
+        text,
+        style: const TextStyle(color: Colors.white, fontSize: 16, height: 1.6),
+      ),
+    );
+  }
+
   Future<void> _exportToPdf(
     BuildContext context,
     AnalysisModel analysis,
   ) async {
     final PdfDocument document = PdfDocument();
     final PdfPage page = document.pages.add();
-    final PdfFont font = PdfStandardFont(PdfFontFamily.helvetica, 12);
+    final PdfFont font = PdfStandardFont(PdfFontFamily.helvetica, 11);
     final PdfFont boldFont = PdfStandardFont(
+      PdfFontFamily.helvetica,
+      12,
+      style: PdfFontStyle.bold,
+    );
+    final PdfFont headerFont = PdfStandardFont(
       PdfFontFamily.helvetica,
       14,
       style: PdfFontStyle.bold,
     );
 
-    // Title
-    page.graphics.drawString(
-      'ATS-Friendly AI Rewritten Resume Data',
-      boldFont,
-      bounds: const Rect.fromLTWH(0, 0, 500, 30),
-    );
+    // If we have a fully rewritten text, print it semantically
+    if (analysis.rewrittenResumeText != null &&
+        analysis.rewrittenResumeText!.isNotEmpty) {
+      double yPos = 20;
+      PdfPage currentPage = page;
 
-    // Draw content
-    double currentY = 40;
+      final lines = analysis.rewrittenResumeText!.split('\n');
+      for (var line in lines) {
+        if (line.trim().isEmpty) {
+          yPos += 8; // Small gap for empty lines
+          continue;
+        }
 
-    if (analysis.rewrittenBullets.isNotEmpty) {
+        PdfFont currentFont = font;
+        double xOffset = 0;
+
+        // Semantic Rules
+        bool isHeader =
+            line == line.toUpperCase() &&
+            line.length < 60 &&
+            !line.startsWith('-') &&
+            !line.startsWith('•');
+
+        if (isHeader) {
+          currentFont = headerFont;
+          yPos += 12; // Extra top padding for headers
+        } else if (line.trim().startsWith('-') ||
+            line.trim().startsWith('•') ||
+            line.trim().startsWith('*')) {
+          xOffset = 15; // Indent bullet points
+        } else if (line.split(' ').length < 8 &&
+            !line.contains(RegExp(r'[a-z]'))) {
+          // Secondary fallback for titles without lowercase
+          currentFont = boldFont;
+        }
+
+        final element = PdfTextElement(
+          text: line,
+          font: currentFont,
+          format: PdfStringFormat(lineSpacing: 3),
+        );
+
+        // Calculate available height, force new page if at extreme bottom
+        if (yPos > currentPage.getClientSize().height - 30) {
+          currentPage = document.pages.add();
+          yPos = 20;
+        }
+
+        final PdfLayoutResult? result = element.draw(
+          page: currentPage,
+          bounds: Rect.fromLTWH(
+            xOffset,
+            yPos,
+            currentPage.getClientSize().width - xOffset,
+            currentPage.getClientSize().height - yPos,
+          ),
+        );
+
+        if (result != null) {
+          yPos = result.bounds.bottom + 4;
+          currentPage = result.page;
+        }
+      }
+    } else {
+      // Fallback for older resumes without rewrite metadata
+      double currentY = 40;
+
+      if (analysis.rewrittenBullets.isNotEmpty) {
+        page.graphics.drawString(
+          'Optimized Bullet Points to Copy/Paste:',
+          boldFont,
+          bounds: Rect.fromLTWH(0, currentY, 500, 20),
+        );
+        currentY += 30;
+        for (var bullet in analysis.rewrittenBullets) {
+          page.graphics.drawString(
+            '• ${bullet.after}',
+            font,
+            bounds: Rect.fromLTWH(20, currentY, 480, 50),
+          );
+          currentY += 50;
+        }
+      }
+
+      currentY += 20;
       page.graphics.drawString(
-        'Optimized Bullet Points to Copy/Paste:',
+        'Missing Keywords from Job Description:',
         boldFont,
         bounds: Rect.fromLTWH(0, currentY, 500, 20),
       );
       currentY += 30;
-      for (var bullet in analysis.rewrittenBullets) {
+      for (var word in analysis.missingKeywords) {
         page.graphics.drawString(
-          '• ${bullet.after}',
+          '• $word',
           font,
-          bounds: Rect.fromLTWH(20, currentY, 480, 50),
+          bounds: Rect.fromLTWH(20, currentY, 480, 20),
         );
-        currentY += 50;
+        currentY += 20;
       }
-    }
-
-    currentY += 20;
-    page.graphics.drawString(
-      'Missing Keywords from Job Description:',
-      boldFont,
-      bounds: Rect.fromLTWH(0, currentY, 500, 20),
-    );
-    currentY += 30;
-    for (var word in analysis.missingKeywords) {
-      page.graphics.drawString(
-        '• $word',
-        font,
-        bounds: Rect.fromLTWH(20, currentY, 480, 20),
-      );
-      currentY += 20;
     }
 
     List<int> bytes = await document.save();

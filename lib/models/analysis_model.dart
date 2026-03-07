@@ -30,6 +30,7 @@ class AnalysisModel {
   final List<String> missingKeywords;
   final List<RewrittenBullet> rewrittenBullets;
   final Map<String, int> categoryScores;
+  final String? rewrittenResumeText;
 
   AnalysisModel({
     required this.id,
@@ -43,6 +44,7 @@ class AnalysisModel {
     this.missingKeywords = const [],
     this.rewrittenBullets = const [],
     this.categoryScores = const {},
+    this.rewrittenResumeText,
   });
 
   factory AnalysisModel.fromJson(Map<String, dynamic> json) {
@@ -68,6 +70,7 @@ class AnalysisModel {
               .toList() ??
           [],
       categoryScores: Map<String, int>.from(json['categoryScores'] ?? {}),
+      rewrittenResumeText: json['rewrittenResumeText'],
     );
   }
 
@@ -84,6 +87,8 @@ class AnalysisModel {
       'missingKeywords': missingKeywords,
       'rewrittenBullets': rewrittenBullets.map((e) => e.toJson()).toList(),
       'categoryScores': categoryScores,
+      if (rewrittenResumeText != null)
+        'rewrittenResumeText': rewrittenResumeText,
     };
   }
 }

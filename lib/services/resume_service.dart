@@ -59,6 +59,7 @@ class ResumeService extends ChangeNotifier {
       missingKeywords: analysis.missingKeywords,
       rewrittenBullets: analysis.rewrittenBullets,
       categoryScores: analysis.categoryScores,
+      rewrittenResumeText: analysis.rewrittenResumeText,
     );
 
     await analysisRef.set(finalAnalysis.toJson());
@@ -85,10 +86,9 @@ class ResumeService extends ChangeNotifier {
     String userId, {
     String? jobDescription,
   }) async {
-    const apiKey =
-        'AIzaSyDhRLD5muOXPFCQhXtcqYv5PXnecCakJ1Y'; // Replace this with your actual API Key
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
-    if (apiKey == 'YOUR_API_KEY') {
+    if (apiKey.isEmpty || apiKey == 'YOUR_API_KEY') {
       debugPrint("Fallback to local scoring: No API Key provided.");
       return _fallbackLocalScoring(
         text,
@@ -99,7 +99,13 @@ class ResumeService extends ChangeNotifier {
     }
 
     try {
-      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: apiKey,
+        generationConfig: GenerationConfig(
+          responseMimeType: 'application/json',
+        ),
+      );
       final hasJd = jobDescription != null && jobDescription.trim().isNotEmpty;
       final prompt =
           '''
@@ -132,7 +138,8 @@ The JSON object must have exactly this structure:
     "Action Verbs": <integer between 0 and 100>,
     "Formatting": <integer between 0 and 100>,
     "Skills": <integer between 0 and 100>
-  }
+  },
+  "rewrittenResumeText": "<string containing a cohesive, fully rewritten, ATS-optimized version of the entire resume from top to bottom. Incorporate all of your previous suggestions. Do NOT use markdown symbols like * or #. Use ALL CAPS for section headers. Ensure it reads like a standard plain-text printable resume. CRITICAL: MUST ESCAPE ALL NEWLINES AS \\n AND DOUBLE QUOTES AS \\\" SO THE JSON REMAINS PERFECTLY VALID.>"
 }
 
 Resume Text:
@@ -179,9 +186,12 @@ $text
                 .toList() ??
             [],
         categoryScores: Map<String, int>.from(data['categoryScores'] ?? {}),
+        rewrittenResumeText:
+            data['rewrittenResumeText'] ??
+            'DEBUG STRING: The AI completely ignored the instruction to generate rewrittenResumeText! Check the JSON schema.',
       );
-    } catch (e) {
-      debugPrint("AI engine error occurred: $e");
+    } catch (e, stack) {
+      debugPrint("AI engine error occurred: $e\n$stack");
       return _fallbackLocalScoring(
         text,
         resumeUrl,
@@ -263,7 +273,7 @@ $text
       missingKeywords: jobDescription != null && jobDescription.isNotEmpty
           ? ['Example Skill']
           : [],
-      rewrittenBullets: [],
+      rewrittenBullets: [], // local doesn't rewrite bullets
       categoryScores: {
         'Impact': score,
         'Brevity': 50,
@@ -271,6 +281,8 @@ $text
         'Formatting': 50,
         'Skills': hasSkills ? 100 : 0,
       },
+      rewrittenResumeText:
+          'DEBUG STRING: LOCAL FALLBACK TRIGGERED. The AI threw an error, or the API key failed. Please check your console logs.',
     );
   }
 }
