@@ -60,11 +60,98 @@ class ResumeService extends ChangeNotifier {
       rewrittenBullets: analysis.rewrittenBullets,
       categoryScores: analysis.categoryScores,
       rewrittenResumeText: analysis.rewrittenResumeText,
+      rewrittenResumeLatex: analysis.rewrittenResumeLatex,
     );
 
     await analysisRef.set(finalAnalysis.toJson());
 
     return finalAnalysis;
+  }
+
+  /// Given the original resume plain text and a job description,
+  /// generates a fully rewritten LaTeX source targeting that JD.
+  Future<String> tailorResumeToJob({
+    required String resumeText,
+    required String jobDescription,
+  }) async {
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+
+    if (apiKey.isEmpty) throw Exception('No API Key configured.');
+
+    final model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(responseMimeType: 'application/json'),
+    );
+
+    final prompt =
+        '''
+You are an expert resume writer and ATS optimization specialist.
+You are given a candidate's resume and a job description.
+Your task is to rewrite the entire resume to perfectly match the job description.
+
+RULES:
+- Incorporate ALL important keywords, skills, and tools mentioned in the job description naturally into the resume.
+- Rewrite bullet points to use strong action verbs and quantifiable metrics.
+- Keep the candidate's real experience, names, dates and education — do NOT fabricate facts.
+- Output ONLY a JSON object with a single key: "latex"
+- The "latex" value must be a complete, compile-ready LaTeX source code using the Harshibar ATS template structure below.
+- MUST ESCAPE ALL NEWLINES AS \\n AND DOUBLE QUOTES AS \\" SO THE JSON REMAINS PERFECTLY VALID.
+
+LaTeX Template Structure to follow:
+\\documentclass[letterpaper,11pt]{article}
+\\usepackage[empty]{fullpage}
+\\usepackage{titlesec}
+\\usepackage[usenames,dvipsnames]{color}
+\\usepackage{enumitem}
+\\usepackage[hidelinks]{hyperref}
+\\usepackage{fancyhdr}
+\\usepackage{tabularx}
+\\usepackage{tgheros}
+\\renewcommand*\\familydefault{\\sfdefault}
+\\usepackage[T1]{fontenc}
+\\definecolor{light-grey}{gray}{0.83}
+\\definecolor{dark-grey}{gray}{0.3}
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyfoot{}
+\\renewcommand{\\headrulewidth}{0pt}
+\\addtolength{\\oddsidemargin}{-0.5in}
+\\addtolength{\\textwidth}{1in}
+\\addtolength{\\topmargin}{-.5in}
+\\addtolength{\\textheight}{1.0in}
+\\titleformat{\\section}{\\bfseries \\vspace{2pt} \\raggedright \\large}{}{0em}{}[\\color{light-grey}{\\titlerule[2pt]} \\vspace{-4pt}]
+\\newcommand{\\resumeItem}[1]{\\item\\small{{#1 \\vspace{-1pt}}}}
+\\newcommand{\\resumeSubheading}[4]{\\vspace{-1pt}\\item\\begin{tabular*}{\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}\\textbf{#1} & {\\color{dark-grey}\\small #2}\\vspace{1pt}\\\\ \\textit{#3} & {\\color{dark-grey} \\small #4}\\\\\\end{tabular*}\\vspace{-4pt}}
+\\newcommand{\\resumeProjectHeading}[2]{\\item\\begin{tabular*}{\\textwidth}{l@{\\extracolsep{\\fill}}r}#1 & {\\color{dark-grey}} \\\\\\end{tabular*}\\vspace{-4pt}}
+\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0in, label={}]}
+\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}
+\\newcommand{\\resumeItemListStart}{\\begin{itemize}}
+\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{0pt}}
+\\begin{document}
+... (fill in all sections: HEADING, EXPERIENCE, EDUCATION, SKILLS, PROJECTS)
+\\end{document}
+
+Job Description:
+$jobDescription
+
+Candidate Resume Text:
+$resumeText
+''';
+
+    final response = await model.generateContent([Content.text(prompt)]);
+    final responseText = response.text ?? '{}';
+
+    final int startIndex = responseText.indexOf('{');
+    final int endIndex = responseText.lastIndexOf('}');
+    if (startIndex == -1 || endIndex == -1) {
+      throw FormatException('No JSON found in tailor response');
+    }
+
+    final data = jsonDecode(responseText.substring(startIndex, endIndex + 1));
+    final latex = data['latex'] as String? ?? '';
+    if (latex.isEmpty) throw Exception('AI returned empty LaTeX code.');
+    return latex;
   }
 
   Future<String> _extractTextFromPdf(Uint8List pdfBytes) async {
@@ -139,7 +226,8 @@ The JSON object must have exactly this structure:
     "Formatting": <integer between 0 and 100>,
     "Skills": <integer between 0 and 100>
   },
-  "rewrittenResumeText": "<string containing a cohesive, fully rewritten, ATS-optimized version of the entire resume from top to bottom. Incorporate all of your previous suggestions. Do NOT use markdown symbols like * or #. Use ALL CAPS for section headers. Ensure it reads like a standard plain-text printable resume. CRITICAL: MUST ESCAPE ALL NEWLINES AS \\n AND DOUBLE QUOTES AS \\\" SO THE JSON REMAINS PERFECTLY VALID.>"
+  "rewrittenResumeText": "<string containing a fully rewritten, ATS-optimized version of the resume. Imitate standard resume sections: SUMMARY, EXPERIENCE, EDUCATION, SKILLS, PROJECTS. Under each heading, provide the content. For Experience/Projects/Education subheadings, use this EXACT format on a single line: 'Title/Role | Company/School | Location | Dates'. Then use standard bullet points starting with exactly '- '. Do not use markdown like asterisks. CRITICAL: MUST ESCAPE ALL NEWLINES AS \\n AND DOUBLE QUOTES AS \\\" SO THE JSON REMAINS VALID.>",
+  "rewrittenResumeLatex": "<string containing a cohesive, fully rewritten, ATS-optimized version of the entire resume from top to bottom. CRITICAL: This MUST be a completely valid, compile-ready LaTeX source code document using the exact 'Harshibar / Jake\\'s Resume' ATS template structure. Do not use Markdown, only pure unescaped LaTeX code wrapped inside the JSON string. CRITICAL: MUST ESCAPE ALL NEWLINES AS \\n AND DOUBLE QUOTES AS \\\" SO THE JSON IN THIS FIELD REMAINS PERFECTLY VALID.>"
 }
 
 Resume Text:
@@ -189,6 +277,7 @@ $text
         rewrittenResumeText:
             data['rewrittenResumeText'] ??
             'DEBUG STRING: The AI completely ignored the instruction to generate rewrittenResumeText! Check the JSON schema.',
+        rewrittenResumeLatex: data['rewrittenResumeLatex'],
       );
     } catch (e, stack) {
       debugPrint("AI engine error occurred: $e\n$stack");

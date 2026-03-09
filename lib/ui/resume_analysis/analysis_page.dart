@@ -6,15 +6,25 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:universal_html/html.dart' as html;
 import '../../models/analysis_model.dart';
+import '../../services/resume_service.dart';
 import '../widgets/kinetic_background.dart';
 
-class AnalysisPage extends StatelessWidget {
+class AnalysisPage extends StatefulWidget {
   final AnalysisModel? analysis;
 
   const AnalysisPage({super.key, this.analysis});
 
   @override
+  State<AnalysisPage> createState() => _AnalysisPageState();
+}
+
+class _AnalysisPageState extends State<AnalysisPage> {
+  bool _isTailoring = false;
+  final ResumeService _resumeService = ResumeService();
+
+  @override
   Widget build(BuildContext context) {
+    final analysis = widget.analysis;
     if (analysis == null) {
       return Scaffold(
         body: KineticBackground(
@@ -28,9 +38,9 @@ class AnalysisPage extends StatelessWidget {
       );
     }
 
-    final score = analysis!.score;
-    final detectedSections = analysis!.detectedSections;
-    final suggestions = analysis!.suggestions;
+    final score = analysis.score;
+    final detectedSections = analysis.detectedSections;
+    final suggestions = analysis.suggestions;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -52,16 +62,16 @@ class AnalysisPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildScoreCircle(context, score),
-                if (analysis!.jobMatchPercentage != null) ...[
+                if (analysis.jobMatchPercentage != null) ...[
                   const SizedBox(height: 48),
                   _buildSectionTitle('Job Match Analysis'),
                   const SizedBox(height: 16),
-                  _buildJobMatchCard(analysis!),
+                  _buildJobMatchCard(analysis),
                 ],
                 const SizedBox(height: 48),
                 _buildSectionTitle('Performance Radar'),
                 const SizedBox(height: 16),
-                _buildRadarChartCard(analysis!.categoryScores),
+                _buildRadarChartCard(analysis.categoryScores),
                 const SizedBox(height: 48),
                 _buildSectionTitle('Detected Sections'),
                 const SizedBox(height: 16),
@@ -70,20 +80,139 @@ class AnalysisPage extends StatelessWidget {
                 _buildSectionTitle('Improvement Suggestions'),
                 const SizedBox(height: 16),
                 _buildSuggestions(suggestions),
-                if (analysis!.rewrittenBullets.isNotEmpty) ...[
+                if (analysis.rewrittenBullets.isNotEmpty) ...[
                   const SizedBox(height: 48),
                   _buildSectionTitle('Magic Rewrite Bullets'),
                   const SizedBox(height: 16),
-                  _buildRewrittenBullets(analysis!.rewrittenBullets),
+                  _buildRewrittenBullets(analysis.rewrittenBullets),
                 ],
-                if (analysis!.rewrittenResumeText != null &&
-                    analysis!.rewrittenResumeText!.isNotEmpty) ...[
+                if (analysis.rewrittenResumeText != null &&
+                    analysis.rewrittenResumeText!.isNotEmpty) ...[
                   const SizedBox(height: 48),
-                  _buildSectionTitle('Fully Rewritten Resume'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle('Fully Rewritten Resume'),
+                      if (analysis.rewrittenResumeLatex != null)
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF00FFC2),
+                            side: const BorderSide(color: Color(0xFF00FFC2)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () => _downloadLatex(
+                            context,
+                            analysis.rewrittenResumeLatex!,
+                          ),
+                          icon: const Icon(Icons.code, size: 18),
+                          label: const Text(
+                            'Get LaTeX Code',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
-                  _buildRewrittenResumeText(analysis!.rewrittenResumeText!),
+                  _buildRewrittenResumeText(analysis.rewrittenResumeText!),
                 ],
                 const SizedBox(height: 64),
+                // --- Tailor for Job Button ---
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF7B2FFF).withOpacity(0.25),
+                        const Color(0xFF00FFC2).withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFF7B2FFF).withOpacity(0.4),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.work_outline,
+                            color: Color(0xFF7B2FFF),
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Tailor Resume for a Job',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Paste a job description to get a perfectly tailored resume that includes all the required keywords.',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18,
+                            horizontal: 32,
+                          ),
+                          backgroundColor: const Color(0xFF7B2FFF),
+                          foregroundColor: Colors.white,
+                          elevation: 8,
+                          shadowColor: const Color(0xFF7B2FFF).withOpacity(0.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _isTailoring
+                            ? null
+                            : () => _showTailorDialog(
+                                context,
+                                analysis.rewrittenResumeText ?? '',
+                              ),
+                        icon: _isTailoring
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.auto_fix_high),
+                        label: Text(
+                          _isTailoring
+                              ? 'Generating Tailored Resume…'
+                              : 'Tailor Resume for Job Description',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // --- Bottom Action Buttons ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -115,10 +244,10 @@ class AnalysisPage extends StatelessWidget {
                         elevation: 10,
                         shadowColor: const Color(0xFF00FFC2).withOpacity(0.5),
                       ),
-                      onPressed: () => _exportToPdf(context, analysis!),
-                      icon: const Icon(Icons.picture_as_pdf),
+                      onPressed: () => _exportToPdf(context, analysis),
+                      icon: const Icon(Icons.download),
                       label: const Text(
-                        'Download ATS Optimized PDF',
+                        'Download ATS Resume',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -129,6 +258,139 @@ class AnalysisPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Shows the Tailor for Job bottom sheet dialog
+  void _showTailorDialog(BuildContext context, String resumeText) {
+    final jdController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1A1A2E),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    '🎯 Tailor Resume to Job Description',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Paste the job description below. Our AI will rewrite your resume to include all the important keywords and generate a perfectly tailored LaTeX file.',
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: jdController,
+                    maxLines: 10,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Paste job description here...',
+                      hintStyle: const TextStyle(color: Colors.white30),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.06),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF7B2FFF),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      backgroundColor: const Color(0xFF7B2FFF),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final jd = jdController.text.trim();
+                      if (jd.isEmpty) return;
+                      Navigator.of(ctx).pop();
+                      setState(() => _isTailoring = true);
+                      try {
+                        final latex = await _resumeService.tailorResumeToJob(
+                          resumeText: resumeText,
+                          jobDescription: jd,
+                        );
+                        _downloadLatex(context, latex);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: const Color(0xFFFF4949),
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (mounted) setState(() => _isTailoring = false);
+                      }
+                    },
+                    icon: const Icon(Icons.auto_fix_high),
+                    label: const Text(
+                      'Generate Tailored Resume',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -472,6 +734,28 @@ class AnalysisPage extends StatelessWidget {
     );
   }
 
+  void _downloadLatex(BuildContext context, String latexCode) {
+    final base64Data = base64Encode(utf8.encode(latexCode));
+    final anchor = html.document.createElement('a') as html.AnchorElement
+      ..href = 'data:text/plain;charset=utf-8;base64,$base64Data'
+      ..style.display = 'none'
+      ..download = 'ATS_Optimized_Resume.tex';
+    html.document.body?.children.add(anchor);
+    anchor.click();
+    html.document.body?.children.remove(anchor);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'LaTeX source downloaded! Open in Overleaf to generate PDF.',
+          ),
+          backgroundColor: Color(0xFF00FFC2),
+        ),
+      );
+    }
+  }
+
   Future<void> _exportToPdf(
     BuildContext context,
     AnalysisModel analysis,
@@ -556,15 +840,78 @@ class AnalysisPage extends StatelessWidget {
             RegExp(r'^[-•*]\s*'),
             '${String.fromCharCode(149)}  ',
           );
-        } else {
-          // Job Titles or Degrees (typically short bold lines before bullets)
-          if (line.split(' ').length <= 15 &&
-              !line.contains(RegExp(r'[.]{2,}'))) {
-            currentFont = jobTitleFont;
-            yPos += 8; // Spacing before a new job block
-          } else {
-            currentFont = bodyFont;
+        } else if (line.contains('|')) {
+          // A subheading formatted as: Title | Company | Location | Dates
+          // We will draw it directly here to allow right alignment
+          final parts = line.split('|').map((e) => e.trim()).toList();
+
+          if (parts.length >= 2) {
+            String leftText1 = parts[0];
+            String rightText1 = parts.length > 3
+                ? parts[3]
+                : (parts.length > 2 ? parts[2] : parts[1]);
+
+            // Draw Left
+            currentPage.graphics.drawString(
+              leftText1,
+              jobTitleFont,
+              bounds: Rect.fromLTWH(
+                0,
+                yPos + 6,
+                currentPage.getClientSize().width,
+                20,
+              ),
+            );
+            // Draw Right
+            final Size rightSize = bodyFont.measureString(rightText1);
+            currentPage.graphics.drawString(
+              rightText1,
+              bodyFont,
+              bounds: Rect.fromLTWH(
+                currentPage.getClientSize().width - rightSize.width,
+                yPos + 6,
+                rightSize.width,
+                20,
+              ),
+            );
+            yPos += 18;
+
+            if (parts.length >= 3) {
+              String leftText2 = parts[1];
+              String rightText2 = parts.length > 3 ? parts[2] : '';
+
+              if (leftText2.isNotEmpty || rightText2.isNotEmpty) {
+                currentPage.graphics.drawString(
+                  leftText2,
+                  bodyFont,
+                  bounds: Rect.fromLTWH(
+                    0,
+                    yPos,
+                    currentPage.getClientSize().width,
+                    20,
+                  ),
+                );
+
+                if (rightText2.isNotEmpty) {
+                  final Size rightSize2 = bodyFont.measureString(rightText2);
+                  currentPage.graphics.drawString(
+                    rightText2,
+                    bodyFont,
+                    bounds: Rect.fromLTWH(
+                      currentPage.getClientSize().width - rightSize2.width,
+                      yPos,
+                      rightSize2.width,
+                      20,
+                    ),
+                  );
+                }
+                yPos += 14;
+              }
+            }
+            continue; // Skip the default drawing below
           }
+        } else {
+          currentFont = bodyFont;
         }
 
         final element = PdfTextElement(
@@ -599,11 +946,13 @@ class AnalysisPage extends StatelessWidget {
           // Draw standard LaTeX horizontal rule under section headers
           if (isSectionHeader) {
             yPos += 4;
-            double textWidth = currentFont.measureString(line).width;
             currentPage.graphics.drawLine(
               PdfPen(PdfColor(0, 0, 0), width: 1.2),
               Offset(0, yPos),
-              Offset(textWidth, yPos),
+              Offset(
+                currentPage.getClientSize().width,
+                yPos,
+              ), // Draw full width like standard template
             );
             yPos += 6;
           }

@@ -10,7 +10,6 @@ class AppTheme {
         primary: Color(0xFF00FFC2),
         secondary: Color(0xFF7000FF),
         surface: Color(0xFF1A1A2E),
-        background: Color(0xFF0F0F1E),
         error: Color(0xFFFF4949),
       ),
       scaffoldBackgroundColor: const Color(0xFF0F0F1E),
