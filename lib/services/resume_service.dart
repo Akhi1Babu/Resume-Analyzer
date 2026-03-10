@@ -154,6 +154,84 @@ $resumeText
     return latex;
   }
 
+  /// Generates a structured list of interview questions from resume text.
+  /// Returns a JSON string: { "categories": [ { "name": ..., "questions": [ { "q": ..., "tip": ... } ] } ] }
+  Future<Map<String, dynamic>> generateInterviewQuestions({
+    required String resumeText,
+    String? jobTitle,
+  }) async {
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    if (apiKey.isEmpty) throw Exception('No API Key configured.');
+
+    final model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(responseMimeType: 'application/json'),
+    );
+
+    final title = jobTitle?.isNotEmpty == true
+        ? jobTitle!
+        : 'the role suggested by the resume';
+
+    final prompt =
+        '''
+You are a senior technical recruiter and career coach.
+Analyze the candidate\'s resume and generate a comprehensive set of interview questions
+they are highly likely to face when applying for $title.
+
+Output ONLY a JSON object with this exact structure (no markdown, no extra text):
+{
+  "categories": [
+    {
+      "name": "Behavioral & Soft Skills",
+      "icon": "psychology",
+      "color": "#FFB800",
+      "questions": [
+        { "q": "question text", "tip": "brief answer tip in 1-2 sentences" }
+      ]
+    },
+    {
+      "name": "Technical & Domain Skills",
+      "icon": "code",
+      "color": "#00FFC2",
+      "questions": [...]
+    },
+    {
+      "name": "Role-Specific Experience",
+      "icon": "work",
+      "color": "#7B2FFF",
+      "questions": [...]
+    },
+    {
+      "name": "Situational & Problem Solving",
+      "icon": "lightbulb",
+      "color": "#FF4949",
+      "questions": [...]
+    }
+  ]
+}
+
+Rules:
+- Generate 4-6 questions per category (total ~18-22 questions).
+- Each question must be tailored to THIS candidate\'s specific resume.
+- Tips must be concise and actionable (max 25 words).
+- Base technical questions on the exact skills and technologies found in the resume.
+- MUST ESCAPE ALL NEWLINES AS \\n AND DOUBLE QUOTES AS \\" SO JSON IS VALID.
+
+Resume:
+$resumeText
+''';
+
+    final response = await model.generateContent([Content.text(prompt)]);
+    final text = response.text ?? '{}';
+
+    final start = text.indexOf('{');
+    final end = text.lastIndexOf('}');
+    if (start == -1 || end == -1) throw FormatException('No JSON in response');
+
+    return jsonDecode(text.substring(start, end + 1)) as Map<String, dynamic>;
+  }
+
   Future<String> _extractTextFromPdf(Uint8List pdfBytes) async {
     try {
       final document = PdfDocument(inputBytes: pdfBytes);

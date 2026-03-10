@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:universal_html/html.dart' as html;
 import '../widgets/kinetic_background.dart';
 
 // ─── Dramatic scroll-reveal widget ───────────────────────────────────────────
@@ -231,7 +232,7 @@ class _LandingPageState extends State<LandingPage>
                                       ),
                                     ),
                                     child: const Text(
-                                      '✦  Powered by Gemini AI',
+                                      '✦  Powered by Advanced AI',
                                       style: TextStyle(
                                         color: Color(0xFF00FFC2),
                                         fontSize: 13,
@@ -332,7 +333,7 @@ class _LandingPageState extends State<LandingPage>
                                 spacing: 48,
                                 runSpacing: 24,
                                 children: [
-                                  _stat('Gemini 2.5', 'Flash AI Model'),
+                                  _stat('Advanced AI', 'Latest Model'),
                                   _stat('ATS Score', 'Real-time'),
                                   _stat('LaTeX PDF', 'One-click Export'),
                                   _stat('100%', 'Secure & Private'),
@@ -506,6 +507,21 @@ class _LandingPageState extends State<LandingPage>
                                   tag: 'Privacy',
                                 ),
                               ),
+                              _RevealSection(
+                                scrollController: _scroll,
+                                delay: const Duration(milliseconds: 500),
+                                slideFrom: const Offset(-0.15, 0.1),
+                                child: _serviceCard(
+                                  icon: Icons.record_voice_over,
+                                  title: 'Interview Questions',
+                                  description:
+                                      'Get 18-22 AI-curated interview questions tailored to your exact resume — grouped by Behavioral, Technical, Situational & Role-Specific categories, each with answer tips.',
+                                  color: const Color(
+                                    0xFF00B4FF,
+                                  ), // Using a distinct color
+                                  tag: 'Interview Prep',
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -567,7 +583,7 @@ class _LandingPageState extends State<LandingPage>
                                 child: _stepCard(
                                   '02',
                                   'AI Analysis',
-                                  'Gemini AI scores, critiques, and rewrites every section with brutal honesty.',
+                                  'Our AI scores, critiques, and rewrites every section with brutal honesty.',
                                   const Color(0xFF7B2FFF),
                                   Icons.psychology,
                                 ),
@@ -739,7 +755,15 @@ class _LandingPageState extends State<LandingPage>
           const SizedBox(width: 4),
           _navButton('How It Works', () => _scrollTo(_howItWorksKey)),
           const SizedBox(width: 4),
-          _navButton('Contact', () => _scrollTo(_ctaKey)),
+          _navButton(
+            'Contact',
+            () => html.window.open(
+              'https://www.linkedin.com/in/akhilbabua',
+              '_blank',
+            ),
+            icon: Icons.link,
+            iconColor: const Color(0xFF0A66C2),
+          ),
           const SizedBox(width: 16),
           ElevatedButton(
             onPressed: () => context.go('/login'),
@@ -762,15 +786,23 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  Widget _navButton(String label, VoidCallback onTap) {
-    return TextButton(
+  Widget _navButton(
+    String label,
+    VoidCallback onTap, {
+    IconData? icon,
+    Color? iconColor,
+  }) {
+    return TextButton.icon(
       onPressed: onTap,
       style: TextButton.styleFrom(
         foregroundColor: Colors.white70,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: Text(
+      icon: icon != null
+          ? Icon(icon, size: 18, color: iconColor ?? Colors.white70)
+          : const SizedBox.shrink(),
+      label: Text(
         label,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       ),

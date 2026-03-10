@@ -20,6 +20,7 @@ class AnalysisPage extends StatefulWidget {
 
 class _AnalysisPageState extends State<AnalysisPage> {
   bool _isTailoring = false;
+  bool _isLoadingInterviewQ = false;
   final ResumeService _resumeService = ResumeService();
 
   @override
@@ -212,6 +213,110 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
+
+                // --- Interview Questions Card ---
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFFF8A00).withOpacity(0.22),
+                        const Color(0xFFFFB800).withOpacity(0.08),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFFFF8A00).withOpacity(0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF8A00).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.record_voice_over,
+                              color: Color(0xFFFF8A00),
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Interview Questions',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Get 18-22 AI-curated questions tailored to your resume, grouped by category with answer tips.',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18,
+                            horizontal: 32,
+                          ),
+                          backgroundColor: const Color(0xFFFF8A00),
+                          foregroundColor: Colors.white,
+                          elevation: 8,
+                          shadowColor: const Color(
+                            0xFFFF8A00,
+                          ).withOpacity(0.45),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _isLoadingInterviewQ
+                            ? null
+                            : () => _showInterviewQuestionsDialog(
+                                context,
+                                analysis.rewrittenResumeText ?? '',
+                              ),
+                        icon: _isLoadingInterviewQ
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.quiz_outlined),
+                        label: Text(
+                          _isLoadingInterviewQ
+                              ? 'Generating Questions…'
+                              : 'Generate Interview Questions',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
                 // --- Bottom Action Buttons ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -383,6 +488,323 @@ class _AnalysisPageState extends State<AnalysisPage> {
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Shows a full-screen bottom sheet with AI-generated interview questions
+  void _showInterviewQuestionsDialog(
+    BuildContext context,
+    String resumeText,
+  ) async {
+    if (resumeText.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Resume text is not available. Please re-analyze.'),
+          backgroundColor: Color(0xFFFF4949),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoadingInterviewQ = true);
+
+    Map<String, dynamic>? data;
+    String? error;
+
+    try {
+      data = await _resumeService.generateInterviewQuestions(
+        resumeText: resumeText,
+      );
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      if (mounted) setState(() => _isLoadingInterviewQ = false);
+    }
+
+    if (!mounted) return;
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $error'),
+          backgroundColor: const Color(0xFFFF4949),
+        ),
+      );
+      return;
+    }
+
+    final categories = (data?['categories'] as List<dynamic>?) ?? [];
+
+    // Map icon string → IconData
+    IconData _iconFor(String name) {
+      switch (name) {
+        case 'psychology':
+          return Icons.psychology;
+        case 'code':
+          return Icons.code;
+        case 'work':
+          return Icons.work_outline;
+        case 'lightbulb':
+          return Icons.lightbulb_outline;
+        default:
+          return Icons.help_outline;
+      }
+    }
+
+    Color _colorFrom(String hex) {
+      try {
+        return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+      } catch (_) {
+        return const Color(0xFF00FFC2);
+      }
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.92,
+          minChildSize: 0.5,
+          maxChildSize: 0.98,
+          builder: (ctx, scrollCtrl) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF12121F),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                children: [
+                  // Drag handle + header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFFF8A00,
+                                ).withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.record_voice_over,
+                                color: Color(0xFFFF8A00),
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '🎤 Interview Questions',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Tailored to your resume by Our AI',
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Divider(color: Colors.white.withOpacity(0.08)),
+                      ],
+                    ),
+                  ),
+
+                  // Questions list
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollCtrl,
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                      itemCount: categories.length,
+                      itemBuilder: (ctx, catIdx) {
+                        final cat = categories[catIdx] as Map<String, dynamic>;
+                        final catName = cat['name'] as String? ?? 'Questions';
+                        final catIcon = _iconFor(cat['icon'] as String? ?? '');
+                        final catColor = _colorFrom(
+                          cat['color'] as String? ?? '#00FFC2',
+                        );
+                        final questions =
+                            (cat['questions'] as List<dynamic>?) ?? [];
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            // Category header
+                            Row(
+                              children: [
+                                Icon(catIcon, color: catColor, size: 20),
+                                const SizedBox(width: 10),
+                                Text(
+                                  catName,
+                                  style: TextStyle(
+                                    color: catColor,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: catColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${questions.length}',
+                                    style: TextStyle(
+                                      color: catColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            // Question tiles
+                            ...questions.asMap().entries.map((entry) {
+                              final qIdx = entry.key;
+                              final q = entry.value as Map<String, dynamic>;
+                              final question = q['q'] as String? ?? '';
+                              final tip = q['tip'] as String? ?? '';
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E1E35),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: catColor.withOpacity(0.18),
+                                  ),
+                                ),
+                                child: Theme(
+                                  data: Theme.of(
+                                    ctx,
+                                  ).copyWith(dividerColor: Colors.transparent),
+                                  child: ExpansionTile(
+                                    leading: Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: catColor.withOpacity(0.15),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${qIdx + 1}',
+                                          style: TextStyle(
+                                            color: catColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      question,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    iconColor: catColor,
+                                    collapsedIconColor: Colors.white38,
+                                    children: [
+                                      if (tip.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            16,
+                                            0,
+                                            16,
+                                            16,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(14),
+                                            decoration: BoxDecoration(
+                                              color: catColor.withOpacity(0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: catColor.withOpacity(
+                                                  0.2,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(
+                                                  Icons.tips_and_updates,
+                                                  color: catColor,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    tip,
+                                                    style: TextStyle(
+                                                      color: Colors.white
+                                                          .withOpacity(0.75),
+                                                      fontSize: 13,
+                                                      height: 1.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],
