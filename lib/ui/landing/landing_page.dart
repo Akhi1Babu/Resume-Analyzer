@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:universal_html/html.dart' as html;
 import '../widgets/kinetic_background.dart';
+part 'services_marquee.dart';
 
-// ─── Dramatic scroll-reveal widget ───────────────────────────────────────────
+// â”€â”€â”€ Dramatic scroll-reveal widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _RevealSection extends StatefulWidget {
   final Widget child;
   final ScrollController scrollController;
@@ -102,7 +103,7 @@ class _RevealSectionState extends State<_RevealSection>
   }
 }
 
-// ─── Landing Page ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Landing Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
 
@@ -164,7 +165,7 @@ class _LandingPageState extends State<LandingPage>
         child: SafeArea(
           child: Stack(
             children: [
-              // ── SCROLLABLE CONTENT ───────────────────────────────────
+              // â”€â”€ SCROLLABLE CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               SingleChildScrollView(
                 controller: _scroll,
                 child: Center(
@@ -175,7 +176,7 @@ class _LandingPageState extends State<LandingPage>
                       children: [
                         const SizedBox(height: 72),
 
-                        // ── HERO (slides down from top) ──────────────
+                        // â”€â”€ HERO (slides down from top) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         FadeTransition(
                           opacity: _heroFade,
                           child: SlideTransition(
@@ -232,7 +233,7 @@ class _LandingPageState extends State<LandingPage>
                                       ),
                                     ),
                                     child: const Text(
-                                      '✦  Powered by Advanced AI',
+                                      'âœ¦  Powered by Advanced AI',
                                       style: TextStyle(
                                         color: Color(0xFF00FFC2),
                                         fontSize: 13,
@@ -260,7 +261,7 @@ class _LandingPageState extends State<LandingPage>
                                       maxWidth: 640,
                                     ),
                                     child: Text(
-                                      'Stop wondering why you didn\'t get the interview. Upload your resume and let our AI engine brutally critique, score, and rewrite it — then download as a professional LaTeX PDF.',
+                                      'Stop wondering why you didn\'t get the interview. Upload your resume and let our AI engine brutally critique, score, and rewrite it â€” then download as a professional LaTeX PDF.',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 18,
@@ -292,7 +293,7 @@ class _LandingPageState extends State<LandingPage>
                                       size: 22,
                                     ),
                                     label: const Text(
-                                      'Get Started — It\'s Free',
+                                      'Get Started as Free',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -305,7 +306,7 @@ class _LandingPageState extends State<LandingPage>
                           ),
                         ),
 
-                        // ── STATS BAR ────────────────────────────────
+                        // â”€â”€ STATS BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         _RevealSection(
                           scrollController: _scroll,
                           delay: const Duration(milliseconds: 100),
@@ -345,7 +346,7 @@ class _LandingPageState extends State<LandingPage>
 
                         const SizedBox(height: 88),
 
-                        // ── SERVICES HEADING ──────────────────────────
+                        // â”€â”€ SERVICES HEADING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         _RevealSection(
                           scrollController: _scroll,
                           slideFrom: const Offset(0, 0.20),
@@ -382,153 +383,12 @@ class _LandingPageState extends State<LandingPage>
 
                         const SizedBox(height: 48),
 
-                        // ── SERVICE CARDS (staggered, alternating slide direction) ─
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Wrap(
-                            spacing: 24,
-                            runSpacing: 24,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 0),
-                                slideFrom: const Offset(-0.15, 0.1),
-                                child: _serviceCard(
-                                  icon: Icons.psychology_alt,
-                                  title: 'Brutal AI Feedback',
-                                  description:
-                                      'Our AI doesn\'t sugarcoat. It critiques your resume with humorous, pointed feedback so you know exactly what\'s holding you back.',
-                                  color: const Color(0xFFFFB800),
-                                  tag: 'Core',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 100),
-                                slideFrom: const Offset(0, 0.2),
-                                child: _serviceCard(
-                                  icon: Icons.radar,
-                                  title: 'ATS Score & Radar',
-                                  description:
-                                      'Get an overall ATS score + a 5-axis radar rating your resume on Impact, Brevity, Action Verbs, Formatting, and Skills.',
-                                  color: const Color(0xFF00FFC2),
-                                  tag: 'Analytics',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 200),
-                                slideFrom: const Offset(0.15, 0.1),
-                                child: _serviceCard(
-                                  icon: Icons.work_outline,
-                                  title: 'Job Description Match',
-                                  description:
-                                      'Paste a job description to see your match % and the exact keywords missing from your resume.',
-                                  color: const Color(0xFF7B2FFF),
-                                  tag: 'ATS',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 100),
-                                slideFrom: const Offset(-0.15, 0.1),
-                                child: _serviceCard(
-                                  icon: Icons.auto_fix_high,
-                                  title: 'Magic Bullet Rewriter',
-                                  description:
-                                      'AI rewrites your weakest bullets into metric-driven, action-packed statements that get past ATS filters.',
-                                  color: const Color(0xFFFF4949),
-                                  tag: 'AI Rewrite',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 200),
-                                slideFrom: const Offset(0, 0.2),
-                                child: _serviceCard(
-                                  icon: Icons.description_outlined,
-                                  title: 'Full Resume Rewrite',
-                                  description:
-                                      'Get a completely polished, ATS-optimized version of your entire resume — rewritten section by section.',
-                                  color: const Color(0xFF00B4FF),
-                                  tag: 'AI Rewrite',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 300),
-                                slideFrom: const Offset(0.15, 0.1),
-                                child: _serviceCard(
-                                  icon: Icons.picture_as_pdf,
-                                  title: 'LaTeX PDF Download',
-                                  description:
-                                      'Download your resume as a professional LaTeX source in the Harshibar ATS template — Overleaf-ready.',
-                                  color: const Color(0xFFFF8A00),
-                                  tag: 'Export',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 200),
-                                slideFrom: const Offset(-0.15, 0.1),
-                                child: _serviceCard(
-                                  icon: Icons.tune,
-                                  title: 'Tailor for Any Job',
-                                  description:
-                                      'Paste a specific job description and get a tailored LaTeX resume that naturally weaves in every required keyword.',
-                                  color: const Color(0xFF00FFC2),
-                                  tag: 'Pro Feature',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 300),
-                                slideFrom: const Offset(0, 0.2),
-                                child: _serviceCard(
-                                  icon: Icons.history,
-                                  title: 'Analysis History',
-                                  description:
-                                      'All analyses saved securely to Firebase. Track improvement and revisit any previous result anytime.',
-                                  color: const Color(0xFF7B2FFF),
-                                  tag: 'Cloud',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 400),
-                                slideFrom: const Offset(0.15, 0.1),
-                                child: _serviceCard(
-                                  icon: Icons.lock_outline,
-                                  title: '100% Private & Secure',
-                                  description:
-                                      'Your resume is parsed entirely in-browser. No file is ever uploaded — only the analysis result is saved.',
-                                  color: const Color(0xFFFFB800),
-                                  tag: 'Privacy',
-                                ),
-                              ),
-                              _RevealSection(
-                                scrollController: _scroll,
-                                delay: const Duration(milliseconds: 500),
-                                slideFrom: const Offset(-0.15, 0.1),
-                                child: _serviceCard(
-                                  icon: Icons.record_voice_over,
-                                  title: 'Interview Questions',
-                                  description:
-                                      'Get 18-22 AI-curated interview questions tailored to your exact resume — grouped by Behavioral, Technical, Situational & Role-Specific categories, each with answer tips.',
-                                  color: const Color(
-                                    0xFF00B4FF,
-                                  ), // Using a distinct color
-                                  tag: 'Interview Prep',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // â”€â”€ SERVICE CARDS â€” dual-row infinite marquee â”€â”€â”€â”€â”€â”€
+                        _ServicesMarquee(key: _servicesKey),
 
                         const SizedBox(height: 96),
 
-                        // ── HOW IT WORKS ──────────────────────────────
+                        // â”€â”€ HOW IT WORKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         _RevealSection(
                           scrollController: _scroll,
                           slideFrom: const Offset(0, 0.20),
@@ -571,7 +431,7 @@ class _LandingPageState extends State<LandingPage>
                                 child: _stepCard(
                                   '01',
                                   'Upload PDF',
-                                  'Drop your resume PDF. Parsed securely in your browser — files never leave your device.',
+                                  'Drop your resume PDF. Parsed securely in your browser â€” files never leave your device.',
                                   const Color(0xFF00FFC2),
                                   Icons.upload_file,
                                 ),
@@ -618,7 +478,7 @@ class _LandingPageState extends State<LandingPage>
 
                         const SizedBox(height: 96),
 
-                        // ── FINAL CTA ─────────────────────────────────
+                        // â”€â”€ FINAL CTA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                         _RevealSection(
                           scrollController: _scroll,
                           slideFrom: const Offset(0, 0.20),
@@ -647,7 +507,7 @@ class _LandingPageState extends State<LandingPage>
                             child: Column(
                               children: [
                                 const Text(
-                                  '🚀',
+                                  'Resume AI',
                                   style: TextStyle(fontSize: 56),
                                 ),
                                 const SizedBox(height: 20),
@@ -711,7 +571,7 @@ class _LandingPageState extends State<LandingPage>
                 ),
               ),
 
-              // ── FLOATING NAVBAR ──────────────────────────────────────
+              // â”€â”€ FLOATING NAVBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               Positioned(
                 top: 0,
                 left: 0,
@@ -725,7 +585,7 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  // ── Navbar ────────────────────────────────────────────────────────────────
+  // â”€â”€ Navbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildNavbar(BuildContext context) {
     return Container(
@@ -809,7 +669,7 @@ class _LandingPageState extends State<LandingPage>
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _sectionLabel(String text) {
     return Container(

@@ -232,6 +232,119 @@ $resumeText
     return jsonDecode(text.substring(start, end + 1)) as Map<String, dynamic>;
   }
 
+  /// Generates a structured 30-day learning plan for a missing skill.
+  Future<Map<String, dynamic>> generateSkillLearningPlan({
+    required String skill,
+    required String targetJobTitle,
+    String? currentLevel, // beginner / intermediate / advanced
+  }) async {
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    if (apiKey.isEmpty) throw Exception('No API Key configured.');
+
+    final model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(responseMimeType: 'application/json'),
+    );
+
+    final prompt =
+        '''
+You are an expert learning coach and software skills mentor.
+Create a detailed, structured 30-day learning plan for mastering "$skill"
+so the candidate can qualify for a "$targetJobTitle" role.
+Current level: ${currentLevel ?? 'beginner'}.
+
+Output ONLY valid JSON with this exact structure:
+{
+  "skill": "$skill",
+  "totalDays": 30,
+  "summary": "One sentence overview of the plan",
+  "weeks": [
+    {
+      "week": 1,
+      "theme": "Foundations",
+      "days": "Day 1-7",
+      "goal": "What will be mastered",
+      "tasks": [
+        "Specific task or resource",
+        "Specific task or resource"
+      ],
+      "milestone": "What you can do by end of week"
+    },
+    { "week": 2, ... },
+    { "week": 3, ... },
+    { "week": 4, ... }
+  ],
+  "resources": [
+    { "type": "Course", "name": "Resource name", "url": "URL or platform", "free": true },
+    { "type": "Book", "name": "Book name", "url": "", "free": false },
+    { "type": "Practice", "name": "Platform or exercise", "url": "", "free": true }
+  ],
+  "projectIdea": "A mini project to build and add to resume to prove this skill"
+}
+
+Rules:
+- Be VERY specific with tasks (not vague like "learn the basics").
+- Reference actual resources (YouTube channels, docs, frameworks, websites).
+- The milestone must be concrete and testable.
+- Escape all special characters for valid JSON.
+''';
+
+    final response = await model.generateContent([Content.text(prompt)]);
+    final text = response.text ?? '{}';
+    final start = text.indexOf('{');
+    final end = text.lastIndexOf('}');
+    if (start == -1 || end == -1) throw FormatException('No JSON in response');
+    return jsonDecode(text.substring(start, end + 1)) as Map<String, dynamic>;
+  }
+
+  /// Chat with the AI about the resume. Maintains a history list of messages.
+  /// Returns the AI reply as a plain string.
+  Future<String> chatWithResume({
+    required String resumeText,
+    required List<Map<String, String>>
+    history, // [{role:'user'|'model', text:'...'}]
+    required String userMessage,
+  }) async {
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    if (apiKey.isEmpty) throw Exception('No API Key configured.');
+
+    final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
+
+    // Build content list — system context + history + new message
+    final systemPrompt =
+        '''
+You are a helpful, friendly career coach AI assistant. 
+The user is asking questions about their own resume (pasted below).
+Answer questions clearly, directly, and with constructive advice.
+Keep answers concise (3-5 sentences max unless a detailed breakdown is specifically asked).
+Be conversational but professional. Use bullet points when listing items.
+
+RESUME:
+$resumeText
+''';
+
+    final contents = <Content>[];
+
+    // System context as first user turn (Gemini doesn't have a system role)
+    contents.add(Content.text(systemPrompt));
+
+    // Prior conversation turns
+    for (final msg in history) {
+      if (msg['role'] == 'user') {
+        contents.add(Content.text(msg['text'] ?? ''));
+      } else {
+        contents.add(Content.model([TextPart(msg['text'] ?? '')]));
+      }
+    }
+
+    // New user message
+    contents.add(Content.text(userMessage));
+
+    final response = await model.generateContent(contents);
+    return response.text?.trim() ?? 'Sorry, I could not generate a response.';
+  }
+
   Future<String> _extractTextFromPdf(Uint8List pdfBytes) async {
     try {
       final document = PdfDocument(inputBytes: pdfBytes);

@@ -8,6 +8,7 @@ import 'package:universal_html/html.dart' as html;
 import '../../models/analysis_model.dart';
 import '../../services/resume_service.dart';
 import '../widgets/kinetic_background.dart';
+part 'chat_sheet.dart';
 
 class AnalysisPage extends StatefulWidget {
   final AnalysisModel? analysis;
@@ -21,6 +22,7 @@ class AnalysisPage extends StatefulWidget {
 class _AnalysisPageState extends State<AnalysisPage> {
   bool _isTailoring = false;
   bool _isLoadingInterviewQ = false;
+  bool _isLoadingSkillPlan = false;
   final ResumeService _resumeService = ResumeService();
 
   @override
@@ -45,6 +47,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () =>
+            _openChatSheet(context, widget.analysis?.rewrittenResumeText ?? ''),
+        backgroundColor: const Color(0xFF00FFC2),
+        foregroundColor: const Color(0xFF0F0F1E),
+        icon: const Icon(Icons.chat_bubble_outline),
+        label: const Text(
+          'Chat with Resume',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 12,
+      ),
       appBar: AppBar(
         title: const Text(
           'Analysis Result',
@@ -315,6 +329,136 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 32),
+
+                // --- Skill Learning Plan Card ---
+                if (analysis.missingKeywords.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF00B4FF).withOpacity(0.18),
+                          const Color(0xFF7B2FFF).withOpacity(0.08),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: const Color(0xFF00B4FF).withOpacity(0.35),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF00B4FF,
+                                ).withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.school_outlined,
+                                color: Color(0xFF00B4FF),
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '📚 Skill Learning Plan',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Tap any missing skill to get a personalized 30-day learning roadmap.',
+                                    style: TextStyle(
+                                      color: Colors.white60,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: analysis.missingKeywords.map((skill) {
+                            return ActionChip(
+                              onPressed: _isLoadingSkillPlan
+                                  ? null
+                                  : () => _showSkillPlanDialog(
+                                      context,
+                                      skill,
+                                      analysis.suggestions.isNotEmpty
+                                          ? analysis.suggestions.first
+                                          : 'Software Developer',
+                                    ),
+                              avatar: const Icon(
+                                Icons.add_circle_outline,
+                                size: 16,
+                                color: Color(0xFF00B4FF),
+                              ),
+                              label: Text(
+                                skill,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              backgroundColor: const Color(
+                                0xFF00B4FF,
+                              ).withOpacity(0.12),
+                              side: BorderSide(
+                                color: const Color(0xFF00B4FF).withOpacity(0.4),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (_isLoadingSkillPlan) ...[
+                          const SizedBox(height: 16),
+                          const Row(
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFF00B4FF),
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                'Generating learning plan…',
+                                style: TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
 
                 const SizedBox(height: 32),
                 // --- Bottom Action Buttons ---
@@ -813,6 +957,432 @@ class _AnalysisPageState extends State<AnalysisPage> {
           },
         );
       },
+    );
+  }
+
+  // ── Skill Learning Plan Dialog ─────────────────────────────────────────────
+  Future<void> _showSkillPlanDialog(
+    BuildContext context,
+    String skill,
+    String jobTitle,
+  ) async {
+    setState(() => _isLoadingSkillPlan = true);
+    Map<String, dynamic>? plan;
+    String? error;
+    try {
+      plan = await _resumeService.generateSkillLearningPlan(
+        skill: skill,
+        targetJobTitle: jobTitle,
+      );
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      if (mounted) setState(() => _isLoadingSkillPlan = false);
+    }
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $error'),
+          backgroundColor: const Color(0xFFFF4949),
+        ),
+      );
+      return;
+    }
+
+    final weeks = (plan?['weeks'] as List<dynamic>?) ?? [];
+    final resources = (plan?['resources'] as List<dynamic>?) ?? [];
+    final summary = plan?['summary'] as String? ?? '';
+    final project = plan?['projectIdea'] as String? ?? '';
+
+    final weekColors = [
+      const Color(0xFF00FFC2),
+      const Color(0xFF00B4FF),
+      const Color(0xFF7B2FFF),
+      const Color(0xFFFFB800),
+    ];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.92,
+        minChildSize: 0.5,
+        maxChildSize: 0.98,
+        builder: (ctx, scroll) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF12121F),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: ListView(
+            controller: scroll,
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00B4FF).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.school_outlined,
+                      color: Color(0xFF00B4FF),
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '30-Day Plan: $skill',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'For: $jobTitle',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (summary.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00B4FF).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF00B4FF).withOpacity(0.2),
+                    ),
+                  ),
+                  child: Text(
+                    summary,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              // Weekly breakdown
+              ...weeks.asMap().entries.map((e) {
+                final w = e.value as Map<String, dynamic>;
+                final color = weekColors[e.key % weekColors.length];
+                final tasks = (w['tasks'] as List<dynamic>?) ?? [];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E35),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: color.withOpacity(0.25)),
+                  ),
+                  child: Theme(
+                    data: Theme.of(
+                      ctx,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      initiallyExpanded: e.key == 0,
+                      leading: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            'W${w['week']}',
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        w['theme'] as String? ?? '',
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${w['days']}  •  ${w['goal']}',
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      ),
+                      iconColor: color,
+                      collapsedIconColor: Colors.white38,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ...tasks.map(
+                                (t) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle_outline,
+                                        color: color,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          t.toString(),
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(
+                                              0.8,
+                                            ),
+                                            fontSize: 13,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if ((w['milestone'] as String?)?.isNotEmpty ==
+                                  true) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: color.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.flag_outlined,
+                                        color: color,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Milestone: ${w['milestone']}',
+                                          style: TextStyle(
+                                            color: color,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              // Resources
+              if (resources.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  '📖 Resources',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...resources.map((r) {
+                  final res = r as Map<String, dynamic>;
+                  final isFree = res['free'] == true;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E35),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.07)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          res['type'] == 'Course'
+                              ? Icons.play_circle_outline
+                              : res['type'] == 'Book'
+                              ? Icons.book_outlined
+                              : Icons.computer,
+                          color: const Color(0xFF00B4FF),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                res['name'] as String? ?? '',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if ((res['url'] as String?)?.isNotEmpty == true)
+                                Text(
+                                  res['url'] as String,
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isFree
+                                ? const Color(0xFF00FFC2).withOpacity(0.15)
+                                : Colors.white.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isFree ? 'Free' : 'Paid',
+                            style: TextStyle(
+                              color: isFree
+                                  ? const Color(0xFF00FFC2)
+                                  : Colors.white54,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+              // Project idea
+              if (project.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFFFB800).withOpacity(0.15),
+                        const Color(0xFFFF8A00).withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFFFFB800).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.lightbulb_outline,
+                        color: Color(0xFFFFB800),
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '🚀 Resume Project Idea',
+                              style: TextStyle(
+                                color: Color(0xFFFFB800),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              project,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.82),
+                                fontSize: 13,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Live Chat with Resume ─────────────────────────────────────────────────
+  void _openChatSheet(BuildContext context, String resumeText) {
+    if (resumeText.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Resume text unavailable. Please re-analyze first.'),
+          backgroundColor: Color(0xFFFF4949),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          _ChatSheet(resumeText: resumeText, resumeService: _resumeService),
     );
   }
 
@@ -1446,4 +2016,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
       );
     }
   }
+}
+
+// --- Chat Sheet Widget ---
+class _ChatSheet extends StatefulWidget {
+  final String resumeText;
+  final ResumeService resumeService;
+  const _ChatSheet({required this.resumeText, required this.resumeService});
+  @override
+  State<_ChatSheet> createState() => _ChatSheetState();
 }
