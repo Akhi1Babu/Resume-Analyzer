@@ -30,28 +30,28 @@ class _ServicesMarqueeState extends State<_ServicesMarquee>
     _SC(
       Icons.psychology_alt,
       'Brutal AI Feedback',
-      'Honest, humorous critique of every section so you know exactly what is holding you back.',
+      'Honest critique of every section so you know exactly what is holding you back.',
       0xFFFFB800,
       'Core',
     ),
     _SC(
       Icons.radar,
       'ATS Score & Radar',
-      '5-axis radar chart scoring Impact, Brevity, Action Verbs, Formatting and Skills in real time.',
+      '5-axis radar scoring Impact, Brevity, Action Verbs, Formatting and Skills in real time.',
       0xFF00FFC2,
       'Analytics',
     ),
     _SC(
       Icons.work_outline,
       'Job-Match %',
-      'Paste a job description and see your keyword match score plus every missing skill highlighted.',
+      'Paste a job description and see your keyword match score plus every missing skill.',
       0xFF7B2FFF,
       'ATS',
     ),
     _SC(
       Icons.auto_fix_high,
       'Magic Bullet Rewriter',
-      'Transforms weak bullets into metric-driven, action-packed statements that sail past ATS filters.',
+      'Transforms weak bullets into metric-driven, action-packed statements that pass ATS filters.',
       0xFFFF4949,
       'AI Rewrite',
     ),
@@ -89,7 +89,7 @@ class _ServicesMarqueeState extends State<_ServicesMarquee>
     _SC(
       Icons.lock_outline,
       '100% Private & Secure',
-      'Resume parsed entirely in-browser. No file is ever uploaded — only the analysis result is stored.',
+      'Resume parsed entirely in-browser. No file is ever uploaded — only the result is stored.',
       0xFFFFB800,
       'Privacy',
     ),
@@ -103,7 +103,7 @@ class _ServicesMarqueeState extends State<_ServicesMarquee>
     _SC(
       Icons.school_outlined,
       'Skill Learning Plan',
-      'Tap any missing skill for a personalised 30-day roadmap with weekly tasks, resources and a project idea.',
+      'Tap any missing skill for a personalised 30-day roadmap with tasks, resources and a project idea.',
       0xFF7B2FFF,
       'Upskill',
     ),
@@ -113,6 +113,13 @@ class _ServicesMarqueeState extends State<_ServicesMarquee>
       'Ask our AI career coach anything — your strengths, gaps, salary insight, or role-readiness check.',
       0xFF00FFC2,
       'AI Chat',
+    ),
+    _SC(
+      Icons.person,
+      'Live Interview with Our AI Tech Person',
+      'Do Interview with our AI Recruiter coach, ask anything — your strengths, gaps, salary insight, or role-readiness check.',
+      0xFF00FFC2,
+      'AI Interview',
     ),
   ];
 
@@ -165,7 +172,11 @@ class _MarqueeRow extends StatelessWidget {
     const cardW = 300.0;
     const gap = 20.0;
     const stride = cardW + gap;
-    final total = items.length * stride;
+    // total width of one pass of all cards
+    final totalW = items.length * stride;
+
+    // Build a double-length list so the loop seams invisibly
+    final doubled = [...items, ...items];
 
     return SizedBox(
       height: 200,
@@ -173,20 +184,27 @@ class _MarqueeRow extends StatelessWidget {
         child: AnimatedBuilder(
           animation: controller,
           builder: (_, __) {
-            final rawOffset = controller.value * total;
-            final offset = reverse ? -rawOffset : rawOffset;
-            return Stack(
-              children: List.generate(items.length * 3, (i) {
-                final sc = items[i % items.length];
-                final basePos = i * stride - offset;
-                // Loop: keep cards in a visible window of 3*total
-                final looped = ((basePos % total) + total) % total - stride;
-                return Positioned(
-                  left: looped,
-                  top: 0,
-                  child: _HoverCard(sc: sc),
-                );
-              }),
+            // offset goes from 0 → totalW, then wraps back to 0
+            final offset = (controller.value * totalW) % totalW;
+            final shift = reverse ? -(totalW - offset) : -offset;
+
+            return OverflowBox(
+              alignment: Alignment.centerLeft,
+              maxWidth: double.infinity,
+              child: Transform.translate(
+                offset: Offset(shift, 0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: doubled
+                      .map(
+                        (sc) => Padding(
+                          padding: const EdgeInsets.only(right: gap),
+                          child: _HoverCard(sc: sc),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
             );
           },
         ),

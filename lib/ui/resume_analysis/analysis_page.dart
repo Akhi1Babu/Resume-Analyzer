@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:universal_html/html.dart' as html;
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../../models/analysis_model.dart';
 import '../../services/resume_service.dart';
 import '../widgets/kinetic_background.dart';
 part 'chat_sheet.dart';
+part 'voice_interview_sheet.dart';
 
 class AnalysisPage extends StatefulWidget {
   final AnalysisModel? analysis;
@@ -47,17 +50,42 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () =>
-            _openChatSheet(context, widget.analysis?.rewrittenResumeText ?? ''),
-        backgroundColor: const Color(0xFF00FFC2),
-        foregroundColor: const Color(0xFF0F0F1E),
-        icon: const Icon(Icons.chat_bubble_outline),
-        label: const Text(
-          'Chat with Resume',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 12,
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'voiceInterview',
+            onPressed: () => _openVoiceInterviewSheet(
+              context,
+              widget.analysis?.rewrittenResumeText ?? '',
+            ),
+            backgroundColor: const Color(0xFF7B2FFF),
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.record_voice_over),
+            label: const Text(
+              'Voice Interview',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            elevation: 12,
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'chatResume',
+            onPressed: () => _openChatSheet(
+              context,
+              widget.analysis?.rewrittenResumeText ?? '',
+            ),
+            backgroundColor: const Color(0xFF00FFC2),
+            foregroundColor: const Color(0xFF0F0F1E),
+            icon: const Icon(Icons.chat_bubble_outline),
+            label: const Text(
+              'Chat with Resume',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            elevation: 12,
+          ),
+        ],
       ),
       appBar: AppBar(
         title: const Text(
@@ -1383,6 +1411,29 @@ class _AnalysisPageState extends State<AnalysisPage> {
       backgroundColor: Colors.transparent,
       builder: (_) =>
           _ChatSheet(resumeText: resumeText, resumeService: _resumeService),
+    );
+  }
+
+  // ── Voice Interview With Resume ───────────────────────────────────────────
+  void _openVoiceInterviewSheet(BuildContext context, String resumeText) {
+    if (resumeText.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Resume text unavailable. Please re-analyze first.'),
+          backgroundColor: Color(0xFFFF4949),
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _VoiceInterviewSheet(
+        resumeText: resumeText,
+        resumeService: _resumeService,
+      ),
     );
   }
 

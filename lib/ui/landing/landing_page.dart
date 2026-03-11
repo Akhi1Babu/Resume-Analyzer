@@ -233,7 +233,7 @@ class _LandingPageState extends State<LandingPage>
                                       ),
                                     ),
                                     child: const Text(
-                                      'âœ¦  Powered by Advanced AI',
+                                      'Powered by Advanced AI',
                                       style: TextStyle(
                                         color: Color(0xFF00FFC2),
                                         fontSize: 13,
@@ -261,7 +261,7 @@ class _LandingPageState extends State<LandingPage>
                                       maxWidth: 640,
                                     ),
                                     child: Text(
-                                      'Stop wondering why you didn\'t get the interview. Upload your resume and let our AI engine brutally critique, score, and rewrite it â€” then download as a professional LaTeX PDF.',
+                                      'Stop wondering why you didn\'t get the interview. Upload your resume and let our AI engine brutally critique, score, and rewrite it and then download as a professional LaTeX PDF.',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 18,

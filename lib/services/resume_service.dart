@@ -345,6 +345,63 @@ $resumeText
     return response.text?.trim() ?? 'Sorry, I could not generate a response.';
   }
 
+  /// Conduct a voice-driven interview. Acts as a strict but fair technical interviewer.
+  /// Maintains conversational history.
+  Future<String> voiceInterviewTurn({
+    required String resumeText,
+    required List<Map<String, String>> history,
+    required String userMessage,
+  }) async {
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    if (apiKey.isEmpty) throw Exception('No API Key configured.');
+    final systemInstructionString =
+        '''
+You are an expert technical recruiter conducting a live, voice-based conversational interview with the candidate.
+The candidate's resume is below.
+Rules for this interview:
+1. Ask one direct, specific question at a time based on their experience or skills.
+2. If this is the start of the interview (no history), greet them briefly and ask the first question.
+3. If the user answers, give brief feedback (1-2 sentences) and then ask the NEXT logical question.
+4. Keep all responses very short and spoken-word friendly (max 3-4 sentences total per turn).
+5. DO NOT use markdown formatting like **bold** or bullet points, because this text will be read aloud by a text-to-speech engine. Use plain conversational English.
+
+CANDIDATE RESUME:
+$resumeText
+''';
+
+    final model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey,
+      systemInstruction: Content.system(systemInstructionString),
+    );
+
+    final contents = <Content>[];
+
+    for (final msg in history) {
+      if (msg['role'] == 'user') {
+        contents.add(Content.text(msg['text'] ?? ''));
+      } else {
+        contents.add(Content.model([TextPart(msg['text'] ?? '')]));
+      }
+    }
+
+    // Handle empty start message correctly if needed
+    if (userMessage.isNotEmpty) {
+      contents.add(Content.text(userMessage));
+    } else if (history.isEmpty) {
+      contents.add(Content.text("Hello, I am ready to start the interview."));
+    }
+
+    try {
+      final response = await model.generateContent(contents);
+      return response.text?.trim() ??
+          'Sorry, I could not hear you. Let us try again.';
+    } catch (e) {
+      debugPrint('voiceInterviewTurn error: $e');
+      rethrow;
+    }
+  }
+
   Future<String> _extractTextFromPdf(Uint8List pdfBytes) async {
     try {
       final document = PdfDocument(inputBytes: pdfBytes);
@@ -365,6 +422,9 @@ $resumeText
     String? jobDescription,
   }) async {
     const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    debugPrint(
+      '>>> GEMINI_API_KEY loaded: "${apiKey.isEmpty ? "EMPTY!" : apiKey.substring(0, 8) + "..."}',
+    );
 
     if (apiKey.isEmpty || apiKey == 'YOUR_API_KEY') {
       debugPrint("Fallback to local scoring: No API Key provided.");
